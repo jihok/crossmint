@@ -1,11 +1,12 @@
 {
   "name": "crossmint",
   "version": "1.0.0",
+  "private": "true",
   "scripts": {
     "phase1": "ts-node phase1.ts",
     "phase2": "ts-node phase2.ts"
   },
-  "author": "",
+  "author": "jihok",
   "license": "ISC",
   "description": "",
   "devDependencies": {

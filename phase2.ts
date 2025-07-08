@@ -3,9 +3,7 @@ import type { Direction, Color, Route } from './utils';
 
 type DirectionOrColor = { color: Color } | { direction: Direction };
 type ParseRequestParamsResult =
-  | { route: Route }
-  | { route: Route; params: { color: Color } }
-  | { route: Route; params: { direction: Direction } }
+  | { route: Route; params: { color: Color } | { direction: Direction } | null }
   | null
   | undefined;
 
@@ -13,7 +11,7 @@ type ParseRequestParamsResult =
  * Gets goal or throws error if unexpected result
  * @returns goal matrix
  */
-const getGoal = async () => {
+const getGoal = async (): Promise<Array<Array<string>> | undefined> => {
   try {
     const res = await fetch(
       `https://challenge.crossmint.io/api/map/${process.env.CANDIDATE_ID}/goal`
@@ -38,7 +36,7 @@ const getGoal = async () => {
  *
  * @param content - The string value at a given slot in the matrix (e.g., 'SPACE', 'POLYANET', 'RED_SOLOON', 'UP_COMETH').
  * @returns An object containing the API route and parameters if applicable, or null if the content is 'SPACE'.
- *          Returns undefined if the content is unrecognized or invalid.
+ *          Note: will return undefined and not throw an error if the content is unrecognized or invalid.
  */
 const parseRequestParams = (content: string): ParseRequestParamsResult => {
   if (content === 'SPACE') {
@@ -46,7 +44,7 @@ const parseRequestParams = (content: string): ParseRequestParamsResult => {
   }
 
   if (content === 'POLYANET') {
-    return { route: 'polyanets' };
+    return { route: 'polyanets', params: null };
   }
 
   if (content.includes('_')) {
@@ -103,10 +101,9 @@ const phase2 = async () => {
 
   for (let row = 0; row < numRows; row += 1) {
     for (let column = 0; column < numCols; column += 1) {
-      const requestParams = parseRequestParams(goal[row][column]);
-      if (requestParams) {
-        const { route } = requestParams;
-        const params = 'params' in requestParams ? requestParams.params : {};
+      const parsedParams = parseRequestParams(goal[row][column]);
+      if (parsedParams) {
+        const { route, params } = parsedParams;
         await postWithRetry(route, { row, column, ...params });
       }
     }
