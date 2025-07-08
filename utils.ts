@@ -1,5 +1,6 @@
 export type Direction = 'up' | 'down' | 'left' | 'right';
 export type Color = 'blue' | 'red' | 'purple' | 'white';
+export type Route = 'polyanets' | 'soloons' | 'comeths';
 type BaseParam = { row: number; column: number };
 type Param = BaseParam | (BaseParam & { direction: Direction }) | (BaseParam & { color: Color });
 
@@ -13,7 +14,7 @@ const MAX_RETRIES = 5;
  * @param retries - The current retry attempt (used internally for backoff, default is 0).
  * @returns A promise that resolves when the request succeeds or all retries are exhausted.
  */
-export const postWithRetry = async (route: string, params: Param, retries = 0) => {
+export const postWithRetry = async (route: Route, params: Param, retries = 0) => {
   try {
     const res = await fetch(`https://challenge.crossmint.io/api/${route}`, {
       method: 'POST',

@@ -1,7 +1,13 @@
 import { postWithRetry } from './utils';
-import type { Direction, Color } from './utils';
+import type { Direction, Color, Route } from './utils';
 
 type DirectionOrColor = { color: Color } | { direction: Direction };
+type ParseRequestParamsResult =
+  | { route: Route }
+  | { route: Route; params: { color: Color } }
+  | { route: Route; params: { direction: Direction } }
+  | null
+  | undefined;
 
 /**
  * Gets goal or throws error if unexpected result
@@ -16,7 +22,9 @@ const getGoal = async () => {
     const data = await res.json();
 
     if (!data.goal) throw new Error('No goal');
-    if (!data.goal.length || !data.goal[0].length) throw new Error('Malformed goal');
+    if (!data.goal.length || !data.goal[0].length) {
+      throw new Error(`Malformed goal: ${JSON.stringify(data.goal)}`);
+    }
 
     return data.goal;
   } catch (err) {
@@ -32,7 +40,7 @@ const getGoal = async () => {
  * @returns An object containing the API route and parameters if applicable, or null if the content is 'SPACE'.
  *          Returns undefined if the content is unrecognized or invalid.
  */
-const parseRequestParams = (content: string) => {
+const parseRequestParams = (content: string): ParseRequestParamsResult => {
   if (content === 'SPACE') {
     return null;
   }
@@ -44,7 +52,7 @@ const parseRequestParams = (content: string) => {
   if (content.includes('_')) {
     const parts = content.split('_');
 
-    let route: string | undefined;
+    let route: Route | undefined;
     if (parts[1] === 'COMETH') {
       route = 'comeths';
     } else if (parts[1] === 'SOLOON') {
@@ -96,10 +104,9 @@ const phase2 = async () => {
   for (let row = 0; row < numRows; row += 1) {
     for (let column = 0; column < numCols; column += 1) {
       const requestParams = parseRequestParams(goal[row][column]);
-      const route = requestParams?.route;
-      const params = requestParams?.params;
-
-      if (route) {
+      if (requestParams) {
+        const { route } = requestParams;
+        const params = 'params' in requestParams ? requestParams.params : {};
         await postWithRetry(route, { row, column, ...params });
       }
     }
