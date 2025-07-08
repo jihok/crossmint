@@ -1,14 +1,19 @@
 export type Direction = 'up' | 'down' | 'left' | 'right';
 export type Color = 'blue' | 'red' | 'purple' | 'white';
-type Param = {
-  row: number;
-  column: number;
-  direction?: Direction;
-  color?: Color;
-};
+type BaseParam = { row: number; column: number };
+type Param = BaseParam | (BaseParam & { direction: Direction }) | (BaseParam & { color: Color });
 
+const MAX_RETRIES = 5;
+
+/**
+ * Makes a POST request to the Crossmint challenge API with retry logic and exponential backoff.
+ *
+ * @param route - The API route to post to (e.g., 'polyanets', 'soloons', 'comeths').
+ * @param params - The request body parameters, including candidateId, row, column, and any additional properties.
+ * @param retries - The current retry attempt (used internally for backoff, default is 0).
+ * @returns A promise that resolves when the request succeeds or all retries are exhausted.
+ */
 export const postWithRetry = async (route: string, params: Param, retries = 0) => {
-  const MAX_RETRIES = 5;
   try {
     const res = await fetch(`https://challenge.crossmint.io/api/${route}`, {
       method: 'POST',
