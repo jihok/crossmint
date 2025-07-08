@@ -1,11 +1,15 @@
 {
   "name": "crossmint",
   "version": "1.0.0",
-  "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "phase1": "ts-node phase1.ts",
+    "phase2": "ts-node phase2.ts"
   },
   "author": "",
   "license": "ISC",
-  "description": ""
+  "description": "",
+  "devDependencies": {
+    "ts-node": "10.9.2",
+    "typescript": "5.8.3"
+  }
 }

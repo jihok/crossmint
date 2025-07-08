@@ -1,61 +1,38 @@
-const CANDIDATE_ID = process.env.CANDIDATE_ID;
-const MAX_RETRIES = 5;
-const NUM_ROWS = 11;
-const NUM_COLS = 11;
+import { postWithRetry } from './utils';
+import type { Direction, Color } from './utils';
 
-const postWithRetry = async (route, params, retries = 0) => {
-  try {
-    const res = await fetch(`https://challenge.crossmint.io/api/${route}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ candidateId: CANDIDATE_ID, ...params }),
-    });
+type DirectionOrColor = { color: Color } | { direction: Direction };
 
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    console.log(`Success: ${JSON.stringify(params)}`, data);
-  } catch (err) {
-    if (retries < MAX_RETRIES) {
-      const delay = Math.pow(2, retries) * 1000 + Math.random() * 500; // jitter
-      console.warn(
-        `Retry ${retries + 1} for ${JSON.stringify(params)} after ${delay.toFixed(0)}ms`
-      );
-      await new Promise((res) => setTimeout(res, delay));
-      return postWithRetry(route, params, retries + 1);
-    } else {
-      console.error(`Failed after ${MAX_RETRIES} retries: ${JSON.stringify(params)}`, err);
-    }
-  }
-};
-
-const phase1 = async () => {
-  for (let row = 0; row < NUM_ROWS; row += 1) {
-    for (let column = 0; column < NUM_COLS; column += 1) {
-      const isEdge = row < 2 || row >= NUM_ROWS - 2;
-      if (!isEdge) {
-        if (row === column || row + column === 10) {
-          await postWithRetry('polyanets', { row, column });
-        }
-      }
-    }
-  }
-};
-// phase1();
-
+/**
+ * Gets goal or throws error if unexpected result
+ * @returns goal matrix
+ */
 const getGoal = async () => {
   try {
-    const res = await fetch(`https://challenge.crossmint.io/api/map/${CANDIDATE_ID}/goal`);
+    const res = await fetch(
+      `https://challenge.crossmint.io/api/map/${process.env.CANDIDATE_ID}/goal`
+    );
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
-    console.log(data);
+
+    if (!data.goal) throw new Error('No goal');
+    if (!data.goal.length || !data.goal[0].length) throw new Error('Malformed goal');
+
     return data.goal;
   } catch (err) {
     console.error('Error:', err);
   }
 };
-// getGoal();
 
-const parseRequestParams = (content) => {
+/**
+ * Parses the content value at a given slot in the goal matrix and determines the appropriate
+ * API route and parameters for making a request to the Crossmint challenge API.
+ *
+ * @param content - The string value at a given slot in the matrix (e.g., 'SPACE', 'POLYANET', 'RED_SOLOON', 'UP_COMETH').
+ * @returns An object containing the API route and parameters if applicable, or null if the content is 'SPACE'.
+ *          Returns undefined if the content is unrecognized or invalid.
+ */
+const parseRequestParams = (content: string) => {
   if (content === 'SPACE') {
     return null;
   }
@@ -67,7 +44,7 @@ const parseRequestParams = (content) => {
   if (content.includes('_')) {
     const parts = content.split('_');
 
-    let route;
+    let route: string | undefined;
     if (parts[1] === 'COMETH') {
       route = 'comeths';
     } else if (parts[1] === 'SOLOON') {
@@ -75,7 +52,7 @@ const parseRequestParams = (content) => {
     }
 
     if (route) {
-      let params;
+      let params: DirectionOrColor | undefined;
       const possibleParam = parts[0].toLowerCase();
       if (
         route === 'comeths' &&
@@ -111,6 +88,8 @@ const parseRequestParams = (content) => {
 
 const phase2 = async () => {
   const goal = await getGoal();
+  if (!goal) throw new Error('Goal matrix could not be retrieved.');
+
   const numRows = goal.length;
   const numCols = goal[0].length;
 
@@ -119,11 +98,12 @@ const phase2 = async () => {
       const requestParams = parseRequestParams(goal[row][column]);
       const route = requestParams?.route;
       const params = requestParams?.params;
-      console.log(`row: ${row}`, `col: ${column}`, `content: ${goal[row][column]}`, route, params);
+
       if (route) {
         await postWithRetry(route, { row, column, ...params });
       }
     }
   }
 };
+
 phase2();
